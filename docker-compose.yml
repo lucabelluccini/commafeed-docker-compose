@@ -1,5 +1,11 @@
 version: '2'
 services:
+  web:
+    build: ./commafeed-nginx-docker/
+    ports:
+      - 80:80
+    links:
+      - commafeed
   commafeed:
     build: ../commafeed-docker/
     ports:
