@@ -1,32 +1,42 @@
-version: '2'
+version: '2.1'
 services:
   web:
-    build: ./commafeed-nginx-docker/
+    image: nginx:stable-alpine
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - 80:80
-    links:
-      - commafeed
+    depends_on:
+      commafeed:
+        condition: service_healthy
   commafeed:
-    build: ../commafeed-docker/
+    image: commafeed-docker
     ports:
-     - 8082:8082
-     - 8084:8084
+      - 8082:8082
+      - 8084:8084
     volumes:
-     - /config
-     - /data
-     - /log
-    links:
-     - redis
-     - db
+      - ./config/commafeed.yml:/config/config.yml
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: "curl http://localhost:8082"
   redis:
     image: redis:alpine
     ports:
-     - "6379:6379"
+      - "6379:6379"
+    healthcheck:
+      test: "redis-cli ping"
   db:
     image: postgres:9.6.2-alpine
     ports:
-     - "5432:5432"
+      - "5432:5432"
     environment:
-     - POSTGRES_PASSWORD=sa
-     - POSTGRES_USER=sa
-     - POSTGRES_DB=commafeed
+      - POSTGRES_PASSWORD=sa
+      - POSTGRES_USER=sa
+      - POSTGRES_DB=commafeed
+    healthcheck:
+      test: "nc -z localhost 5432" 
+      #FIXME with something like "$(echo 'SELECT 1' | psql --host localhost --username sa --password sa --quiet --no-align --tuples-only)"
